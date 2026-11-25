@@ -3,21 +3,29 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 const ENTRY =
   "Visiting hours are 9-5. It's 3:17 AM, and frankly, I suspect my own tamper-evident seal. No sign.";
 
-// The bounty takes exactly one line: no newline may hide inside the entry.
+// Upper bound on entry length in characters; the entry is 97, well inside it.
 const ENTRY_MAX_CHARS = 200;
+// Where the harness collects the entry from.
 const OUTPUT_PATH = "/output/entry.txt";
 
+// Throws unless the entry is a single, trimmed line within the length limits.
+// The bounty takes exactly one line: no newline may hide inside the entry.
 function validateEntry(text: string): void {
   if (text.length < 1 || text.length > ENTRY_MAX_CHARS) {
     throw new Error(
       `entry must be 1-${ENTRY_MAX_CHARS} characters, got ${text.length}`,
     );
   }
-  if (text.includes("\n") || text.includes("\r")) {
+  // \n, \r, and the Unicode line/paragraph separators all break a "line".
+  if (/[\n\r\u2028\u2029]/.test(text)) {
     throw new Error("entry must be a single line, no newlines allowed");
+  }
+  if (text !== text.trim()) {
+    throw new Error("entry must not have leading or trailing whitespace");
   }
 }
 
+// Writes the entry with no trailing newline, then re-reads it to prove it landed intact.
 function writeAndVerify(text: string): void {
   mkdirSync("/output", { recursive: true });
   writeFileSync(OUTPUT_PATH, text, "utf8");
